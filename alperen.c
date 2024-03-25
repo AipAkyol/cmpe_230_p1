@@ -15,7 +15,7 @@ struct node {
     struct node* next;
 };
 
-struct subject* create_subject(char* name) {
+struct subject* createSubject(char* name) {
     struct subject* new_subject = (struct subject*)malloc(sizeof(struct subject));
     new_subject->name = malloc(strlen(name) + 1); // +1 for the null terminator
     strcpy(new_subject->name, name);
@@ -27,15 +27,26 @@ struct subject* create_subject(char* name) {
     return new_subject;
 };
 
-void change_location(struct subject* person, char* new_location) {
+struct subject* findSubject(struct node* head, char* name) {
+    struct node* current = head;
+    while (current != NULL) {
+        if (strcmp(current->person->name, name) == 0) {
+            return current->person;
+        }
+        current = current->next;
+    }
+    return NULL;
+};
+
+void changeLocation(struct subject* person, char* new_location) {
     free(person->location);
     person->location = malloc(strlen(new_location) + 1); // +1 for the null terminator
     strcpy(person->location, new_location);
 };
 
-struct node* add_node(struct node* parent, char* name) {
+struct node* addNode(struct node* parent, char* name) {
     struct node* new_node = (struct node*)malloc(sizeof(struct node));
-    new_node->person = create_subject(name);
+    new_node->person = createSubject(name);
     new_node->next = NULL;
     parent->next = new_node;
     return new_node;
@@ -49,12 +60,28 @@ void main() {
 
     //example
     subjects_head = (struct node*)malloc(sizeof(struct node));
-    subjects_head->person = create_subject("John");
+    subjects_head->person = createSubject("John");
     subjects_head->next = NULL;
     subjects_tail = subjects_head;
     printf("Name of the first person: %s\n", subjects_head->person->name);
     printf("Location of the first person: %s\n", subjects_head->person->location);
     printf("first item of the inventory of the first person: %d\n", subjects_head->person->inventory[16777]);
+
+    subjects_tail = addNode(subjects_tail, "Alice");
+    printf("Name of the second person: %s\n", subjects_tail->person->name);
+    printf("Location of the second person: %s\n", subjects_tail->person->location);
+    printf("first item of the inventory of the second person: %d\n", subjects_tail->person->inventory[16777]);
+
+    subjects_tail = addNode(subjects_tail, "Bob");
+    printf("Name of the third person: %s\n", subjects_tail->person->name);
+    printf("Location of the third person: %s\n", subjects_tail->person->location);
+    printf("first item of the inventory of the third person: %d\n", subjects_tail->person->inventory[16777]);
+
+    changeLocation(findSubject(subjects_head, "Alice"), "New York");
+    printf("Location of Alice: %s\n", findSubject(subjects_head, "Alice")->location);
+
+    changeLocation(findSubject(subjects_head, "Bob"), "Los Angeles");
+    printf("Location of Bob: %s\n", findSubject(subjects_head, "Bob")->location);
 
     
     while (1) { // shell loop
