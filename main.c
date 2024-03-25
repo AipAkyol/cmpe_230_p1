@@ -105,5 +105,8 @@ void main() {
             printf("%s\n", input_words[i]);
         }
 
+        printf("hello\n");
+        
+        
     }
 }
