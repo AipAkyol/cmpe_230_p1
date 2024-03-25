@@ -15,11 +15,13 @@ struct node {
     struct node* next;
 };
 
-struct subject* create_subject(char* name) {
+// Subject and Node functions
+
+struct subject* createSubject(char* name) {
     struct subject* new_subject = (struct subject*)malloc(sizeof(struct subject));
-    new_subject->name = malloc(strlen(name) + 1); // +1 for the null terminator
+    new_subject->name = malloc(strlen(name) + 1);
     strcpy(new_subject->name, name);
-    new_subject->location = malloc("NOWHERE" + 1); // +1 for the null terminator
+    new_subject->location = malloc(strlen("NOWHERE") + 1);
     strcpy(new_subject->location, "NOWHERE");
     for (int i = 0; i < 17000; i++) {
         new_subject->inventory[i] = 0;
@@ -27,38 +29,58 @@ struct subject* create_subject(char* name) {
     return new_subject;
 };
 
-void change_location(struct subject* person, char* new_location) {
+struct subject* findSubject(struct node* head, char* name) {
+    struct node* current = head;
+    while (current != NULL) {
+        if (strcmp(current->person->name, name) == 0) {
+            return current->person;
+        }
+        current = current->next;
+    }
+    return NULL;
+};
+
+void changeLocation(struct subject* person, char* new_location) {
     free(person->location);
-    person->location = malloc(strlen(new_location) + 1); // +1 for the null terminator
+    person->location = malloc(strlen(new_location) + 1);
     strcpy(person->location, new_location);
 };
 
-struct node* add_node(struct node* head, char* name) {
-    struct node* new_node = (struct node*)malloc(sizeof(struct node));
-    new_node->person = create_subject(name);
-    new_node->next = NULL;
-    head->next = new_node;
-    return new_node;
+struct node* addNode(struct node* parent, char* name) {
+    struct node* newNode = (struct node*)malloc(sizeof(struct node));
+    newNode->person = createSubject(name);
+    newNode->next = NULL;
+    parent->next = newNode;
+    return newNode;
 };
+
+// Item functions
+
+int getItemIndex(char* item, char** itemList, int itemListCount) {
+    for (int i = 0; i < itemListCount; i++) {
+        if (strcmp(item, itemList[i]) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int getItemCount(int itemIndex, struct subject* person) {
+    return person->inventory[itemIndex];
+}
+
+void changeItemCount(int itemIndex, struct subject* person, int diff) {
+    person->inventory[itemIndex] += diff;
+}
+
 
 
 void main() {
 
     struct node* subjects_head = NULL;
     struct node* subjects_tail = NULL;
-
-    //example
-    subjects_head = (struct node*)malloc(sizeof(struct node));
-    subjects_head->person = create_subject("John");
-    subjects_head->next = NULL;
-    subjects_tail = subjects_head;
-    printf("Name of the first person: %s\n", subjects_head->person.name);
-    printf("Location of the first person: %s\n", subjects_head->person.location);
-    printf("first item of the inventory of the first person: %d\n", subjects_head->person.inventory[170021]);
-
     
     while (1) { // shell loop
-        printf("Welcome to the shell!\n");
         char input[MAX_CHAR_COUNT + 2]; // +2 for newline and null terminator
         printf(">>"); // shell prompt
         fgets(input, MAX_CHAR_COUNT + 2, stdin); // +2 for newline and null terminator
@@ -83,8 +105,5 @@ void main() {
             printf("%s\n", input_words[i]);
         }
 
-        printf("hello\n");
-        
-        
     }
 }
