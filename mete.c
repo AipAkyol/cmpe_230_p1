@@ -3,45 +3,38 @@
 #include <string.h>
 
 #define MAX_CHAR_COUNT 1024
+int question(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    
+}
+int action(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    int validCheck = 1;
+    do{
+        *wordCounter++;
+        if(subject(wordCounter,meaningfulWords,inputWords)==0){
+            validCheck=0;
+            break;
+        }
+        *wordCounter++;
+    }while(strcmp("and",inputWords[*wordCounter]))
+    
+    if(validCheck==0){
+        return 0;
+    }
+    for(int i=0;i)
 
-//struct subject {
-//    char* name;
-//    char* location;
-//    int inventory[17000]; //TODO: check numbers
-//};
-//
-//struct node {
-//    struct subject* person;
-//    struct node* next;
-//};
-//
-//struct subject* create_subject(char* name) {
-//    struct subject* new_subject = (struct subject*)malloc(sizeof(struct subject));
-//    new_subject->name = malloc(strlen(name) + 1); // +1 for the null terminator
-//    strcpy(new_subject->name, name);
-//    new_subject->location = malloc("NOWHERE" + 1); // +1 for the null terminator
-//    strcpy(new_subject->location, "NOWHERE");
-//    for (int i = 0; i < 17000; i++) {
-//        new_subject->inventory[i] = 0;
-//    }
-//    return new_subject;
-//};
-//
-//void change_location(struct subject* person, char* new_location) {
-//    free(person->location);
-//    person->location = malloc(strlen(new_location) + 1); // +1 for the null terminator
-//    strcpy(person->location, new_location);
-//};
-//
-//struct node* add_node(struct node* head, char* name) {
-//    struct node* new_node = (struct node*)malloc(sizeof(struct node));
-//    new_node->person = create_subject(name);
-//    new_node->next = NULL;
-//    head->next = new_node;
-//    return new_node;
-//};
-//
-
+}
+int subject(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    
+}
+int object(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    
+}
+int verb(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    
+}
+int secondVerbs(int* wordCounter,char* meaningfulWords[],char* inputWords[]){
+    
+}
 void main() {
     char* meaningfulWords[] =  {"sell", "buy", "go", "to", "from", "and", "at", "has", "if", "less", "more", "than", "exit", "where", "total", "who","NOBODY", "NOTHING", "NOWHERE"};
     char** item_list = (char**)calloc(17000,sizeof(char*));
@@ -65,7 +58,7 @@ void main() {
             break;
         } 
         int input_length = strlen(input);
-        printf("%s",input[input_length-1]);
+        printf("%c",input[input_length-2]);
 
         char* input_words[MAX_CHAR_COUNT];
         int input_words_count = 0;
