@@ -31,6 +31,8 @@ void main() {
         for (int i = 0; i < input_words_count; i++) {
             printf("%s\n", input_words[i]);
         }
+
+        printf("hello\n");
         
         
     }
