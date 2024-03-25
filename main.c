@@ -4,12 +4,63 @@
 
 #define MAX_CHAR_COUNT 1024
 
+struct subject {
+    char* name;
+    char* location;
+    int inventory[17000]; //TODO: check numbers
+};
+
+struct node {
+    struct subject* person;
+    struct node* next;
+};
+
+struct subject* create_subject(char* name) {
+    struct subject* new_subject = (struct subject*)malloc(sizeof(struct subject));
+    new_subject->name = malloc(strlen(name) + 1); // +1 for the null terminator
+    strcpy(new_subject->name, name);
+    new_subject->location = malloc("NOWHERE" + 1); // +1 for the null terminator
+    strcpy(new_subject->location, "NOWHERE");
+    for (int i = 0; i < 17000; i++) {
+        new_subject->inventory[i] = 0;
+    }
+    return new_subject;
+};
+
+void change_location(struct subject* person, char* new_location) {
+    free(person->location);
+    person->location = malloc(strlen(new_location) + 1); // +1 for the null terminator
+    strcpy(person->location, new_location);
+};
+
+struct node* add_node(struct node* head, char* name) {
+    struct node* new_node = (struct node*)malloc(sizeof(struct node));
+    new_node->person = create_subject(name);
+    new_node->next = NULL;
+    head->next = new_node;
+    return new_node;
+};
+
+
 void main() {
+
+    struct node* subjects_head = NULL;
+    struct node* subjects_tail = NULL;
+
+    //example
+    subjects_head = (struct node*)malloc(sizeof(struct node));
+    subjects_head->person = create_subject("John");
+    subjects_head->next = NULL;
+    subjects_tail = subjects_head;
+    printf("Name of the first person: %s\n", subjects_head->person.name);
+    printf("Location of the first person: %s\n", subjects_head->person.location);
+    printf("first item of the inventory of the first person: %d\n", subjects_head->person.inventory[170021]);
+
     
-    while (1) {
+    while (1) { // shell loop
         printf("Welcome to the shell!\n");
         char input[MAX_CHAR_COUNT + 2]; // +2 for newline and null terminator
-        printf(">>"); // shell
+        printf(">>"); // shell prompt
         fgets(input, MAX_CHAR_COUNT + 2, stdin); // +2 for newline and null terminator
         
         if (strcmp(input, "exit\n") == 0) {
