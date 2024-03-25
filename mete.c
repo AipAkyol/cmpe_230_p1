@@ -45,6 +45,7 @@
 void main() {
     char* meaningfulWords[] =  {"sell", "buy", "go", "to", "from", "and", "at", "has", "if", "less", "more", "than", "exit", "where", "total", "who","NOBODY", "NOTHING", "NOWHERE"};
     char** item_list = (char**)calloc(17000,sizeof(char*));
+    printf("lkdfsghjjks");
     
     
     
