@@ -88,7 +88,7 @@ void changeItemCount(int itemIndex, struct subject* person, int diff) {
 //TODO: contains or equals
 int strContainsKeyword(char* word) {
     for (int i = 0; i < 19; i++) {
-        if (strstr(word, keywords[i]) == 0) {
+        if (strstr(word, keywords[i]) != NULL) {
             return 1;
         }
     }
@@ -105,7 +105,7 @@ int strOnlyLettersandUnderscores(char* word) {
 }
 
 int strFormatTrue(char* word) {
-    return strContainsKeyword(word) && strOnlyLettersandUnderscores(word);
+    return !strContainsKeyword(word) && strOnlyLettersandUnderscores(word);
 }
 
 //Question parser
@@ -143,6 +143,89 @@ struct questionPackage* parseQuestion(char** inputWords, int inputWordsCount) {
         return handleMultipleTotal(inputWords, inputWordsCount);
     } else {
         return NULL;
+    }
+}
+
+void runQuestion(struct questionPackage* package, struct node* subjectsHead) {
+    if (package == NULL) {
+        printf("INVALID\n");
+        return;
+    }
+    else if (strcmp(package->type, "who") == 0) {
+        struct stringList* peopleAtLocationTail = NULL;
+        struct stringList* peopleAtLocationHead = NULL;
+        struct node* current = subjectsHead;
+        while (current != NULL) {
+            if (strcmp(current->person->location, package->location) == 0) {
+                if (peopleAtLocationHead == NULL) {
+                    peopleAtLocationHead = (struct stringList*)malloc(sizeof(struct stringList));
+                    peopleAtLocationHead->string = malloc(strlen(current->person->name) + 1);
+                    strcpy(peopleAtLocationHead->string, current->person->name);
+                    peopleAtLocationHead->next = NULL;
+                    peopleAtLocationTail = peopleAtLocationHead;
+                } else {
+                    peopleAtLocationTail = addString(peopleAtLocationTail, current->person->name);
+                }
+            }
+            current = current->next;
+        }
+        if (peopleAtLocationHead == NULL) {
+            printf("NOBODY\n");
+        } else {
+            printf("%s", peopleAtLocationHead->string);
+            struct stringList* current = peopleAtLocationHead->next;
+            while (current != NULL) {
+                printf("and %s", current->string);
+                current = current->next;
+            }
+            printf("\n");
+        }
+    } else if (strcmp(package->type, "where") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOWHERE\n");
+        } else {
+            printf("%s\n", current->location);
+        }
+    } /*else if (strcmp(package->type, "singleTotalwithoutItem") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOTHING\n");
+        } else {
+            int total = 0;
+            for (int i = 0; i < 17000; i++) {
+                total += current->inventory[i];
+            }
+            printf("%d\n", total);
+        }
+    } else if (strcmp(package->type, "singleTotalwithItem") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOTHING\n");
+        } else {
+            int itemIndex = getItemIndex(package->item, itemList, itemListCount);
+            if (itemIndex == -1) {
+                printf("NOTHING\n");
+            } else {
+                printf("%d\n", current->inventory[itemIndex]);
+            }
+        }
+    } else if (strcmp(package->type, "multipleTotal") == 0) {
+        struct stringList* current = package->subjects;
+        int total = 0;
+        while (current != NULL) {
+            struct subject* currentSubject = findSubject(subjectsHead, current->string);
+            if (currentSubject != NULL) {
+                for (int i = 0; i < 17000; i++) {
+                    total += currentSubject->inventory[i];
+                }
+            }
+            current = current->next;
+        }
+        printf("%d\n", total);
+    }*/
+    else {
+        printf("logic error at question answer\n");
     }
 }
 
@@ -277,7 +360,7 @@ void main() {
     struct node* SubjectsTail = NULL;
 
     //example
-    /*subjectsHead = (struct node*)malloc(sizeof(struct node));
+    subjectsHead = (struct node*)malloc(sizeof(struct node));
     subjectsHead->person = createSubject("John");
     subjectsHead->next = NULL;
     SubjectsTail = subjectsHead;
@@ -295,11 +378,11 @@ void main() {
     printf("Location of the third person: %s\n", SubjectsTail->person->location);
     printf("first item of the inventory of the third person: %d\n", SubjectsTail->person->inventory[16777]);
 
-    changeLocation(findSubject(subjectsHead, "Alice"), "New York");
+    changeLocation(findSubject(subjectsHead, "Alice"), "New_York");
     printf("Location of Alice: %s\n", findSubject(subjectsHead, "Alice")->location);
 
-    changeLocation(findSubject(subjectsHead, "Bob"), "Los Angeles");
-    printf("Location of Bob: %s\n", findSubject(subjectsHead, "Bob")->location);*/
+    changeLocation(findSubject(subjectsHead, "Bob"), "Los_Angeles");
+    printf("Location of Bob: %s\n", findSubject(subjectsHead, "Bob")->location);
 
     
     while (1) { // shell loop
@@ -332,14 +415,8 @@ void main() {
         }
 
         if (strcmp(input_words[inputWordsCount-1], "?") == 0) {
-            if (parseQuestion(input_words, inputWordsCount) == NULL) {
-                printf("Invalid question format\n");
-            } else {
-                printf("Valid question format\n");
-            }
+            struct questionPackage* package = parseQuestion(input_words, inputWordsCount);
+            runQuestion(package, subjectsHead);
         }
-
-        
-        
     }
 }
