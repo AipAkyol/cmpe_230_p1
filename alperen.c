@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define MAX_CHAR_COUNT 1024
+#define MAX_INVERTORY_SIZE 17000
 
 char* keywords[] =  {"sell", "buy", "go", "to", "from",
  "and", "at", "has", "if", "less", "more", "than", "exit", "where",
@@ -11,7 +12,7 @@ char* keywords[] =  {"sell", "buy", "go", "to", "from",
 struct subject {
     char* name;
     char* location;
-    int inventory[17000]; //TODO: check numbers
+    int inventory[MAX_INVERTORY_SIZE]; //TODO: check numbers
 };
 
 struct node {
@@ -27,7 +28,7 @@ struct subject* createSubject(char* name) {
     strcpy(new_subject->name, name);
     new_subject->location = malloc(strlen("NOWHERE") + 1);
     strcpy(new_subject->location, "NOWHERE");
-    for (int i = 0; i < 17000; i++) {
+    for (int i = 0; i < MAX_INVERTORY_SIZE; i++) {
         new_subject->inventory[i] = 0;
     }
     return new_subject;
@@ -67,8 +68,8 @@ struct node* addNode(struct node* parent, char* name) {
 
 // Item functions
 
-int getItemIndex(char* item, char** itemList, int itemListCount) {
-    for (int i = 0; i < itemListCount; i++) {
+int getItemIndex(char* item, char** itemList, int *itemListCount) {
+    for (int i = 0; i < *itemListCount; i++) {
         if (strcmp(item, itemList[i]) == 0) {
             return i;
         }
@@ -82,6 +83,12 @@ int getItemCount(int itemIndex, struct subject* person) {
 
 void changeItemCount(int itemIndex, struct subject* person, int diff) {
     person->inventory[itemIndex] += diff;
+}
+
+void addItem(char* item, char** itemList, int* itemListCount) {
+    itemList[*itemListCount] = malloc(strlen(item) + 1);
+    strcpy(itemList[*itemListCount], item);
+    (*itemListCount)++;
 }
 
 //String check functions
@@ -124,12 +131,35 @@ struct stringList* addString(struct stringList* parent, char* string) {
     return newString;
 }
 
+void freeStringList(struct stringList* head) {
+    struct stringList* current = head;
+    while (current != NULL) {
+        struct stringList* next = current->next;
+        free(current->string);
+        current->string = NULL;
+        free(current);
+        current = next;
+    }
+}
+
 struct questionPackage {
     char* type;
     struct stringList* subjects;
     char* location;
     char* item;
 };
+
+void freeQuestionPackage(struct questionPackage* package) {
+    free(package->type);
+    package->type = NULL;
+    freeStringList(package->subjects);
+    free(package->location);
+    package->location = NULL;
+    free(package->item);
+    package->item = NULL;
+    free(package);
+    package = NULL;
+}
 
 
 struct questionPackage* parseQuestion(char** inputWords, int inputWordsCount) {
@@ -146,7 +176,7 @@ struct questionPackage* parseQuestion(char** inputWords, int inputWordsCount) {
     }
 }
 
-void runQuestion(struct questionPackage* package, struct node* subjectsHead) {
+void runQuestion(struct questionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
     if (package == NULL) {
         printf("INVALID\n");
         return;
@@ -187,43 +217,49 @@ void runQuestion(struct questionPackage* package, struct node* subjectsHead) {
         } else {
             printf("%s\n", current->location);
         }
-    } /*else if (strcmp(package->type, "singleTotalwithoutItem") == 0) {
+    } else if (strcmp(package->type, "singleTotalwithoutItem") == 0) {
         struct subject* current = findSubject(subjectsHead, package->subjects->string);
         if (current == NULL) {
             printf("NOTHING\n");
-        } else {
-            int total = 0;
-            for (int i = 0; i < 17000; i++) {
-                total += current->inventory[i];
+            return;
+        } 
+        int isFirstItem = 1;
+        for (int i = 0; i < *itemListCount; i++) {
+            if (current->inventory[i] != 0) {
+                if (isFirstItem) {
+                    printf("%d %s", current->inventory[i], itemList[i]);
+                    isFirstItem = 0;
+                } else {
+                    printf(" and %d %s", current->inventory[i], itemList[i]);
+                }
             }
-            printf("%d\n", total);
         }
+        printf("\n");
     } else if (strcmp(package->type, "singleTotalwithItem") == 0) {
         struct subject* current = findSubject(subjectsHead, package->subjects->string);
         if (current == NULL) {
             printf("NOTHING\n");
-        } else {
-            int itemIndex = getItemIndex(package->item, itemList, itemListCount);
-            if (itemIndex == -1) {
-                printf("NOTHING\n");
-            } else {
-                printf("%d\n", current->inventory[itemIndex]);
-            }
+            return;
+        } 
+        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
+        if (itemIndex == -1) {
+            printf("0\n");
+            return;
         }
+        printf("%d\n", current->inventory[itemIndex]); 
     } else if (strcmp(package->type, "multipleTotal") == 0) {
         struct stringList* current = package->subjects;
+        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
         int total = 0;
         while (current != NULL) {
             struct subject* currentSubject = findSubject(subjectsHead, current->string);
             if (currentSubject != NULL) {
-                for (int i = 0; i < 17000; i++) {
-                    total += currentSubject->inventory[i];
-                }
+                total += currentSubject->inventory[itemIndex];
             }
             current = current->next;
         }
         printf("%d\n", total);
-    }*/
+    }
     else {
         printf("logic error at question answer\n");
     }
@@ -231,7 +267,8 @@ void runQuestion(struct questionPackage* package, struct node* subjectsHead) {
 
 struct questionPackage* handleWho(char** inputWords, int inputWordsCount) {
     struct questionPackage* package = (struct questionPackage*)malloc(sizeof(struct questionPackage));
-    package->type = "who";
+    package->type = malloc(strlen("who") + 1);
+    strcpy(package->type, "who");
     package->subjects = NULL;
     package->location = NULL;
     package->item = NULL;
@@ -253,7 +290,8 @@ struct questionPackage* handleWho(char** inputWords, int inputWordsCount) {
     
 struct questionPackage* handleWhere(char** inputWords, int inputWordsCount) {
     struct questionPackage* package = (struct questionPackage*)malloc(sizeof(struct questionPackage));
-    package->type = "where";
+    package->type = malloc(strlen("where") + 1);
+    strcpy(package->type, "where");
     package->subjects = NULL;
     package->location = NULL;
     package->item = NULL;
@@ -283,7 +321,8 @@ struct questionPackage* handleSingleTotal(char** inputWords, int inputWordsCount
 
 struct questionPackage* handleSingleTotalwithoutItem(char** inputWords, int inputWordsCount) {
     struct questionPackage* package = (struct questionPackage*)malloc(sizeof(struct questionPackage));
-    package->type = "singleTotalwithoutItem";
+    package->type = malloc(strlen("singleTotalwithoutItem") + 1);
+    strcpy(package->type, "singleTotalwithoutItem");
     package->subjects = NULL;
     package->location = NULL;
     package->item = NULL;
@@ -300,7 +339,8 @@ struct questionPackage* handleSingleTotalwithoutItem(char** inputWords, int inpu
 
 struct questionPackage* handleSingleTotalwithItem(char** inputWords, int inputWordsCount) {
     struct questionPackage* package = (struct questionPackage*)malloc(sizeof(struct questionPackage));
-    package->type = "singleTotalwithItem";
+    package->type = malloc(strlen("singleTotalwithItem") + 1);
+    strcpy(package->type, "singleTotalwithItem");
     package->subjects = NULL;
     package->location = NULL;
     package->item = NULL;
@@ -323,7 +363,8 @@ struct questionPackage* handleSingleTotalwithItem(char** inputWords, int inputWo
 
 struct questionPackage* handleMultipleTotal(char** inputWords, int inputWordsCount) {
     struct questionPackage* package = (struct questionPackage*)malloc(sizeof(struct questionPackage));
-    package->type = "multipleTotal";
+    package->type = malloc(strlen("multipleTotal") + 1);
+    strcpy(package->type, "multipleTotal");
     package->subjects = NULL;
     package->location = NULL;
     package->item = NULL;
@@ -348,13 +389,96 @@ struct questionPackage* handleMultipleTotal(char** inputWords, int inputWordsCou
         }
         return NULL;
     }
+
+    if (strcmp(inputWords[inputWordsCount-3],"total") != 0) {
+        return NULL;
+    }
+    if (strFormatTrue(inputWords[inputWordsCount-2]) == 0) {
+        return NULL;
+    }
+    package->item = malloc(strlen(inputWords[inputWordsCount-2]) + 1);
+    strcpy(package->item, inputWords[inputWordsCount-2]);
     return package;
+}
+
+// Action package
+
+struct intList {
+    int* number;
+    struct intList* next;
+};
+
+struct intList* addInt(struct intList* parent, int* number) {
+    struct intList* newInt = (struct intList*)malloc(sizeof(struct intList));
+    newInt->number = malloc(sizeof(int));
+    *newInt->number = *number;
+    newInt->next = NULL;
+    parent->next = newInt;
+    return newInt;
+}
+
+void freeIntList(struct intList* head) {
+    struct intList* current = head;
+    while (current != NULL) {
+        struct intList* next = current->next;
+        free(current->number);
+        current->number = NULL;
+        free(current);
+        current = next;
+    }
+}
+
+struct actionPackage {
+    char* type;
+    struct stringList* buyers;
+    struct stringList* sellers;
+    struct stringList* goers;
+    struct stringList* items;
+    struct intList* counts;
+    char* location;
+};
+
+void freeActionPackage(struct actionPackage* package) {
+    free(package->type);
+    package->type = NULL;
+    freeStringList(package->buyers);
+    freeStringList(package->sellers);
+    freeStringList(package->goers);
+    freeStringList(package->items);
+    freeIntList(package->counts);
+    free(package->location);
+    package->location = NULL;
+    free(package);
+    package = NULL;
+}
+
+// Condition package
+
+struct conditionPackage {
+    char* type;
+    struct stringList* subjects;
+    struct stringList* items;
+    struct intList* counts;
+    char* location;
+};
+
+void freeConditionPackage(struct conditionPackage* package) {
+    free(package->type);
+    package->type = NULL;
+    freeStringList(package->subjects);
+    freeStringList(package->items);
+    freeIntList(package->counts);
+    free(package->location);
+    package->location = NULL;
+    free(package);
+    package = NULL;
 }
 
 void main() {
 
-    char** itemList = (char**)calloc(17000, sizeof(char*));
-    int itemListCount = 0;
+    char** itemList = (char**)calloc(MAX_INVERTORY_SIZE, sizeof(char*));
+    int* itemListCount = (int*)malloc(sizeof(int));
+    *itemListCount = 0;
 
     struct node* subjectsHead = NULL;
     struct node* SubjectsTail = NULL;
@@ -384,6 +508,37 @@ void main() {
     changeLocation(findSubject(subjectsHead, "Bob"), "Los_Angeles");
     printf("Location of Bob: %s\n", findSubject(subjectsHead, "Bob")->location);
 
+    addItem("apple", itemList, itemListCount);
+    addItem("banana", itemList, itemListCount);
+    addItem("carrot", itemList, itemListCount);
+    printf("Item list count: %d\n", *itemListCount);
+    printf("Item list first item: %s\n", itemList[0]);
+    printf("Item list second item: %s\n", itemList[1]);
+    printf("Item list third item: %s\n", itemList[2]);
+
+    changeItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 5);
+    printf("Alice's apple count: %d\n", getItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
+
+    changeItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice"), -2);
+    printf("Alice's apple count: %d\n", getItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
+
+    changeItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 3);
+    printf("Alice's banana count: %d\n", getItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
+
+    changeItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice"), -1);
+    printf("Alice's banana count: %d\n", getItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
+
+    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 1);
+    printf("Alice's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
+
+    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Bob"), 2);
+    printf("Bob's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Bob")));
+
+    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "John"), 3);
+    printf("John's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "John"))); 
+
+
+
     
     while (1) { // shell loop
         char input[MAX_CHAR_COUNT + 2]; // +2 for newline and null terminator
@@ -411,12 +566,13 @@ void main() {
         
         for (int i = 0; i < inputWordsCount; i++) {
             //printf("%s\n", input_words[i]);
-            printf("%d\n", strFormatTrue(input_words[i]));
+            //printf("%d\n", strFormatTrue(input_words[i]));
         }
 
         if (strcmp(input_words[inputWordsCount-1], "?") == 0) {
             struct questionPackage* package = parseQuestion(input_words, inputWordsCount);
-            runQuestion(package, subjectsHead);
+            runQuestion(package, subjectsHead, itemList, itemListCount);
+            freeQuestionPackage(package);
         }
     }
 }
