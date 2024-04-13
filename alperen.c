@@ -91,8 +91,9 @@ void addItem(char* item, char** itemList, int* itemListCount) {
     (*itemListCount)++;
 }
 
-//String check functions
+// String check functions
 //TODO: contains or equals
+
 int strContainsKeyword(char* word) {
     for (int i = 0; i < 19; i++) {
         if (strstr(word, keywords[i]) != NULL) {
@@ -115,22 +116,37 @@ int strFormatTrue(char* word) {
     return !strContainsKeyword(word) && strOnlyLettersandUnderscores(word);
 }
 
-//Question parser
+// String list
 
 struct stringList {
     char* string;
     struct stringList* next;
 };
 
-struct stringList* addString(struct stringList* parent, char* string) {
+struct stringList* newStringList(char* string) {
     struct stringList* newString = (struct stringList*)malloc(sizeof(struct stringList));
-    newString->string = malloc(strlen(string) + 1);
+    newString->string = (char*)malloc(strlen(string) + 1);
     strcpy(newString->string, string);
     newString->next = NULL;
-    parent->next = newString;
     return newString;
 }
 
+int addString(struct stringList* root , char* string) {
+    struct stringList* current = root;
+    if (strcmp(current->string, string) == 0) {
+        return 0;
+    }
+    while (current->next != NULL) {
+        if (strcmp(current->next->string, string) == 0) {
+            return 0;
+        }
+        current = current->next;
+    }
+    struct stringList* newString = newStringList(string);
+    current->next = newString;
+    return 1;
+}
+    
 void freeStringList(struct stringList* head) {
     struct stringList* current = head;
     while (current != NULL) {
@@ -142,6 +158,8 @@ void freeStringList(struct stringList* head) {
     }
 }
 
+// Question package
+
 struct questionPackage {
     char* type;
     struct stringList* subjects;
@@ -150,6 +168,9 @@ struct questionPackage {
 };
 
 void freeQuestionPackage(struct questionPackage* package) {
+    if (package == NULL) {
+        return;
+    }
     free(package->type);
     package->type = NULL;
     freeStringList(package->subjects);
@@ -161,6 +182,7 @@ void freeQuestionPackage(struct questionPackage* package) {
     package = NULL;
 }
 
+// Question parser 
 
 struct questionPackage* parseQuestion(char** inputWords, int inputWordsCount) {
     if (strcmp(inputWords[0],"who") == 0) {
@@ -173,95 +195,6 @@ struct questionPackage* parseQuestion(char** inputWords, int inputWordsCount) {
         return handleMultipleTotal(inputWords, inputWordsCount);
     } else {
         return NULL;
-    }
-}
-
-void runQuestion(struct questionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
-    if (package == NULL) {
-        printf("INVALID\n");
-        return;
-    }
-    else if (strcmp(package->type, "who") == 0) {
-        struct stringList* peopleAtLocationTail = NULL;
-        struct stringList* peopleAtLocationHead = NULL;
-        struct node* current = subjectsHead;
-        while (current != NULL) {
-            if (strcmp(current->person->location, package->location) == 0) {
-                if (peopleAtLocationHead == NULL) {
-                    peopleAtLocationHead = (struct stringList*)malloc(sizeof(struct stringList));
-                    peopleAtLocationHead->string = malloc(strlen(current->person->name) + 1);
-                    strcpy(peopleAtLocationHead->string, current->person->name);
-                    peopleAtLocationHead->next = NULL;
-                    peopleAtLocationTail = peopleAtLocationHead;
-                } else {
-                    peopleAtLocationTail = addString(peopleAtLocationTail, current->person->name);
-                }
-            }
-            current = current->next;
-        }
-        if (peopleAtLocationHead == NULL) {
-            printf("NOBODY\n");
-        } else {
-            printf("%s", peopleAtLocationHead->string);
-            struct stringList* current = peopleAtLocationHead->next;
-            while (current != NULL) {
-                printf("and %s", current->string);
-                current = current->next;
-            }
-            printf("\n");
-        }
-    } else if (strcmp(package->type, "where") == 0) {
-        struct subject* current = findSubject(subjectsHead, package->subjects->string);
-        if (current == NULL) {
-            printf("NOWHERE\n");
-        } else {
-            printf("%s\n", current->location);
-        }
-    } else if (strcmp(package->type, "singleTotalwithoutItem") == 0) {
-        struct subject* current = findSubject(subjectsHead, package->subjects->string);
-        if (current == NULL) {
-            printf("NOTHING\n");
-            return;
-        } 
-        int isFirstItem = 1;
-        for (int i = 0; i < *itemListCount; i++) {
-            if (current->inventory[i] != 0) {
-                if (isFirstItem) {
-                    printf("%d %s", current->inventory[i], itemList[i]);
-                    isFirstItem = 0;
-                } else {
-                    printf(" and %d %s", current->inventory[i], itemList[i]);
-                }
-            }
-        }
-        printf("\n");
-    } else if (strcmp(package->type, "singleTotalwithItem") == 0) {
-        struct subject* current = findSubject(subjectsHead, package->subjects->string);
-        if (current == NULL) {
-            printf("NOTHING\n");
-            return;
-        } 
-        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
-        if (itemIndex == -1) {
-            printf("0\n");
-            return;
-        }
-        printf("%d\n", current->inventory[itemIndex]); 
-    } else if (strcmp(package->type, "multipleTotal") == 0) {
-        struct stringList* current = package->subjects;
-        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
-        int total = 0;
-        while (current != NULL) {
-            struct subject* currentSubject = findSubject(subjectsHead, current->string);
-            if (currentSubject != NULL) {
-                total += currentSubject->inventory[itemIndex];
-            }
-            current = current->next;
-        }
-        printf("%d\n", total);
-    }
-    else {
-        printf("logic error at question answer\n");
     }
 }
 
@@ -372,19 +305,19 @@ struct questionPackage* handleMultipleTotal(char** inputWords, int inputWordsCou
     if (strFormatTrue(inputWords[0]) == 0) {
         return NULL;
     }
-    package->subjects = (struct stringList*)malloc(sizeof(struct stringList));
-    package->subjects->string = malloc(strlen(inputWords[0]) + 1);
-    strcpy(package->subjects->string, inputWords[0]);
-    package->subjects->next = NULL;
+    package->subjects = newStringList(inputWords[0]);
 
-    struct stringList* current = package->subjects;
+    struct stringList* root = package->subjects;
 
     for (int i = 1; i < inputWordsCount-3; i += 2) {
         if (strcmp(inputWords[i],"and") == 0) {
             if (strFormatTrue(inputWords[i+1]) == 0) {
                 return NULL;
             }
-            current = addString(current, inputWords[i+1]);
+            int checkUniqueness = addString(root, inputWords[i+1]);
+            if (checkUniqueness == 0) {
+                return NULL;
+            }
             continue;
         }
         return NULL;
@@ -401,32 +334,133 @@ struct questionPackage* handleMultipleTotal(char** inputWords, int inputWordsCou
     return package;
 }
 
-// Action package
+// Question runner
+
+void runQuestion(struct questionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    if (package == NULL) {
+        printf("INVALID\n");
+        return;
+    }
+    else if (strcmp(package->type, "who") == 0) {
+        struct stringList* peopleAtLocation = NULL;
+        struct node* current = subjectsHead;
+        while (current != NULL) {
+            if (strcmp(current->person->location, package->location) == 0) {
+                if (peopleAtLocation == NULL) {
+                    peopleAtLocation = newStringList(current->person->name);
+                } else {
+                    int checkwho = addString(peopleAtLocation, current->person->name);
+                    //TODO: check if this is necessary
+                    if (checkwho == 0) {
+                        printf("logic error at who with new string list strcvuteure that implies not unique person at subject list\n");
+                    }
+                }
+            }
+            current = current->next;
+        }
+        if (peopleAtLocation == NULL) {
+            printf("NOBODY\n");
+        } else {
+            printf("%s", peopleAtLocation->string);
+            struct stringList* current = peopleAtLocation->next;
+            while (current != NULL) {
+                printf("and %s", current->string);
+                current = current->next;
+            }
+            printf("\n");
+        }
+    } else if (strcmp(package->type, "where") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOWHERE\n");
+        } else {
+            printf("%s\n", current->location);
+        }
+    } else if (strcmp(package->type, "singleTotalwithoutItem") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOTHING\n");
+            return;
+        } 
+        int isFirstItem = 1;
+        for (int i = 0; i < *itemListCount; i++) {
+            if (current->inventory[i] != 0) {
+                if (isFirstItem) {
+                    printf("%d %s", current->inventory[i], itemList[i]);
+                    isFirstItem = 0;
+                } else {
+                    printf(" and %d %s", current->inventory[i], itemList[i]);
+                }
+            }
+        }
+        printf("\n");
+    } else if (strcmp(package->type, "singleTotalwithItem") == 0) {
+        struct subject* current = findSubject(subjectsHead, package->subjects->string);
+        if (current == NULL) {
+            printf("NOTHING\n");
+            return;
+        } 
+        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
+        if (itemIndex == -1) {
+            printf("0\n");
+            return;
+        }
+        printf("%d\n", current->inventory[itemIndex]); 
+    } else if (strcmp(package->type, "multipleTotal") == 0) {
+        struct stringList* current = package->subjects;
+        int itemIndex = getItemIndex(package->item, itemList, itemListCount);
+        int total = 0;
+        while (current != NULL) {
+            struct subject* currentSubject = findSubject(subjectsHead, current->string);
+            if (currentSubject != NULL) {
+                total += currentSubject->inventory[itemIndex];
+            }
+            current = current->next;
+        }
+        printf("%d\n", total);
+    }
+    else {
+        printf("logic error at question answer\n");
+    }
+}
+
+// Int list
 
 struct intList {
-    int* number;
+    int number;
     struct intList* next;
 };
 
-struct intList* addInt(struct intList* parent, int* number) {
+struct intList* newIntList(int number) {
     struct intList* newInt = (struct intList*)malloc(sizeof(struct intList));
-    newInt->number = malloc(sizeof(int));
-    *newInt->number = *number;
+    newInt->number = number;
     newInt->next = NULL;
-    parent->next = newInt;
     return newInt;
+}
+
+int addInt(struct intList* root, int number) {
+    if (root == NULL) {
+        printf("logic error at addInt\n");
+    }
+    struct intList* current = root;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+    struct intList* newInt = newIntList(number);
+    current->next = newInt;
+    return 1;
 }
 
 void freeIntList(struct intList* head) {
     struct intList* current = head;
     while (current != NULL) {
         struct intList* next = current->next;
-        free(current->number);
-        current->number = NULL;
         free(current);
         current = next;
     }
 }
+
+// Action Package
 
 struct actionPackage {
     char* type;
@@ -438,7 +472,22 @@ struct actionPackage {
     char* location;
 };
 
+struct actionPackage* newActionPackage() {
+    struct actionPackage* newPackage = (struct actionPackage*)malloc(sizeof(struct actionPackage));
+    newPackage->type = NULL;
+    newPackage->buyers = NULL;
+    newPackage->sellers = NULL;
+    newPackage->goers = NULL;
+    newPackage->items = NULL;
+    newPackage->counts = NULL;
+    newPackage->location = NULL;
+    return newPackage;
+}
+
 void freeActionPackage(struct actionPackage* package) {
+    if (package == NULL) {
+        return;
+    }
     free(package->type);
     package->type = NULL;
     freeStringList(package->buyers);
@@ -452,6 +501,31 @@ void freeActionPackage(struct actionPackage* package) {
     package = NULL;
 }
 
+struct actionPackageList {
+    struct actionPackage* package;
+    struct actionPackageList* next;
+};
+
+struct actionPackageList* newActionPackageList(struct actionPackage* package) {
+    struct actionPackageList* newPackage = (struct actionPackageList*)malloc(sizeof(struct actionPackageList));
+    newPackage->package = package;
+    newPackage->next = NULL;
+    return newPackage;
+}
+
+void freeActionPackageList(struct actionPackageList* head) {
+    if (head == NULL) {
+        return;
+    }
+    struct actionPackageList* current = head;
+    while (current != NULL) {
+        struct actionPackageList* next = current->next;
+        freeActionPackage(current->package);
+        free(current);
+        current = next;
+    }
+}
+
 // Condition package
 
 struct conditionPackage {
@@ -462,7 +536,20 @@ struct conditionPackage {
     char* location;
 };
 
+struct conditionPackage* newConditionPackage() {
+    struct conditionPackage* newPackage = (struct conditionPackage*)malloc(sizeof(struct conditionPackage));
+    newPackage->type = NULL;
+    newPackage->subjects = NULL;
+    newPackage->items = NULL;
+    newPackage->counts = NULL;
+    newPackage->location = NULL;
+    return newPackage;
+}
+
 void freeConditionPackage(struct conditionPackage* package) {
+    if (package == NULL) {
+        return;
+    }
     free(package->type);
     package->type = NULL;
     freeStringList(package->subjects);
@@ -472,6 +559,80 @@ void freeConditionPackage(struct conditionPackage* package) {
     package->location = NULL;
     free(package);
     package = NULL;
+}
+
+struct conditionPackageList {
+    struct conditionPackage* package;
+    struct conditionPackageList* next;
+};
+
+struct conditionPackageList* newConditionPackageList(struct conditionPackage* package) {
+    struct conditionPackageList* newPackage = (struct conditionPackageList*)malloc(sizeof(struct conditionPackageList));
+    newPackage->package = package;
+    newPackage->next = NULL;
+    return newPackage;
+}
+
+void freeConditionPackageList(struct conditionPackageList* head) {
+    if (head == NULL) {
+        return;
+    }
+    struct conditionPackageList* current = head;
+    while (current != NULL) {
+        struct conditionPackageList* next = current->next;
+        freeConditionPackage(current->package);
+        free(current);
+        current = next;
+    }
+}
+
+// Sentence package
+
+struct sentencePackage {
+    struct conditionPackageList* conditions; // if null, action; otherwise if
+    struct actionPackageList* actions;
+};
+
+struct sentencePackage* newSentencePackage() {
+    struct sentencePackage* newPackage = (struct sentencePackage*)malloc(sizeof(struct sentencePackage));
+    newPackage->conditions = NULL;
+    newPackage->actions = NULL;
+    return newPackage;
+}
+
+void freeSentencePackage(struct sentencePackage* package) {
+    if (package == NULL) {
+        return;
+    }
+    freeConditionPackageList(package->conditions);
+    freeActionPackageList(package->actions);
+    free(package);
+    package = NULL;
+}
+
+struct sentencePackageList {
+    struct sentencePackage* package;
+    struct sentencePackageList* next;
+};
+
+struct sentencePackageList* newSentencePackageList(struct sentencePackage* package) {
+    struct sentencePackageList* newPackage = (struct sentencePackageList*)malloc(sizeof(struct sentencePackageList));
+    newPackage->package = package;
+    newPackage->next = NULL;
+    return newPackage;
+}
+
+void freeSentencePackageList(struct sentencePackageList* head) {
+    if (head == NULL) {
+        return;
+    }
+    struct sentencePackageList* current = head;
+    while (current != NULL) {
+        struct sentencePackageList* next = current->next;
+        freeSentencePackage(current->package);
+        free(current);
+        current = next;
+    }
 }
 
 void main() {
@@ -547,9 +708,7 @@ void main() {
         
         input[strlen(input) - 1] = '\0'; //remove newline
         
-        if (strcmp(input, "exit") == 0) {
-            break;
-        } 
+
 
         char* input_words[MAX_CHAR_COUNT];
         int inputWordsCount = 0;
@@ -563,6 +722,11 @@ void main() {
         }
         
         printf("Input words count: %d\n", inputWordsCount);
+
+        if (inputWordsCount == 1 && strcmp(input_words[0], "exit") == 0) {
+            break;
+        }
+            
         
         for (int i = 0; i < inputWordsCount; i++) {
             //printf("%s\n", input_words[i]);
