@@ -464,9 +464,8 @@ void freeIntList(struct intList* head) {
 
 struct actionPackage {
     char* type;
-    struct stringList* buyers;
-    struct stringList* sellers;
-    struct stringList* goers;
+    struct stringList* subjects;
+    char* secondSubject;
     struct stringList* items;
     struct intList* counts;
     char* location;
@@ -475,9 +474,8 @@ struct actionPackage {
 struct actionPackage* newActionPackage() {
     struct actionPackage* newPackage = (struct actionPackage*)malloc(sizeof(struct actionPackage));
     newPackage->type = NULL;
-    newPackage->buyers = NULL;
-    newPackage->sellers = NULL;
-    newPackage->goers = NULL;
+    newPackage->subjects = NULL;
+    newPackage->secondSubject = NULL;
     newPackage->items = NULL;
     newPackage->counts = NULL;
     newPackage->location = NULL;
@@ -490,9 +488,9 @@ void freeActionPackage(struct actionPackage* package) {
     }
     free(package->type);
     package->type = NULL;
-    freeStringList(package->buyers);
-    freeStringList(package->sellers);
-    freeStringList(package->goers);
+    freeStringList(package->subjects);
+    free(package->secondSubject);
+    package->secondSubject = NULL;
     freeStringList(package->items);
     freeIntList(package->counts);
     free(package->location);
