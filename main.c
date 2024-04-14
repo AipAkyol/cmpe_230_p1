@@ -1095,22 +1095,29 @@ void printSentenceList(struct sentencePackageList* head) {
     }
 }
 
+// parse buy action sentence
 int checkBuy(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
     int validCheck = 0;
     struct stringList* objectlist= newStringList("if");
     struct intList* numberlist= newIntList(0);
-    do{
+    do{//loop through the items
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
         }
-        if(!isStrNumber(inputWords[(*currentWordIndex)])){
+        if(!isStrNumber(inputWords[(*currentWordIndex)])){//check count of the item
             if(validCheck==0){
                 break;
             }else{
                 validCheck=1;
                 (*currentWordIndex)--;
-                return 1;
+                action->items=objectlist->next;
+                action->counts= numberlist->next;
+                free(objectlist->string);
+                objectlist->string=NULL;
+                free(objectlist);
+                free(numberlist);                
+                return 1;//continue with action
             }
         }
         addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
@@ -1133,19 +1140,20 @@ int checkBuy(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         }
         validCheck = 1;
     }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
-    if(validCheck==0){
+    if(validCheck==0){//if the input is not in the correct format
         return 0;
     }
+    //assign the items and counts to the action package
     action->items=objectlist->next;
     action->counts= numberlist->next;
     free(objectlist->string);
     objectlist->string=NULL;
     free(objectlist);
     free(numberlist);
-    if(validCheck==3){
+    if(validCheck==3){//if the input is in the correct format and there is no more words
         return 3;
     }
-    if(strcmp("from",inputWords[(*currentWordIndex)])==0){
+    if(strcmp("from",inputWords[(*currentWordIndex)])==0){//if from exists
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1158,7 +1166,7 @@ int checkBuy(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         if (strcmp(current->string, string) == 0) {
             return 0;
         }
-        while (current->next != NULL) {
+        while (current->next != NULL) {//check if the subject is already in the subjectlist
             if (strcmp(current->next->string, string) == 0) {
                 return 0;
             }
@@ -1168,33 +1176,40 @@ int checkBuy(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         strcpy(action->secondSubject,inputWords[(*currentWordIndex)]);
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
-            return 3;
+            return 3;//if the input is in the correct format and there is no more words
         }
     }
     if (strcmp("if",inputWords[(*currentWordIndex)])==0){
-        return 2;
+        return 2;//continue wıth condition
     }
     if (strcmp("and",inputWords[(*currentWordIndex)])==0){
-        return 1;
+        return 1;//continue with action
     }
     return 0;
 }
+//parse sell action sentence
 int checkSell(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
     int validCheck = 0;
     struct stringList* objectlist= newStringList("if");
     struct intList* numberlist= newIntList(0);
-    do{
+    do{//loop through the items
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
         }
-        if(!isStrNumber(inputWords[(*currentWordIndex)])){
+        if(!isStrNumber(inputWords[(*currentWordIndex)])){//check count of the item
             if(validCheck==0){
                 break;
             }else{
                 validCheck=1;
                 (*currentWordIndex)--;
-                return 1;
+                action->items=objectlist->next;
+                action->counts= numberlist->next;
+                free(objectlist->string);
+                objectlist->string=NULL;
+                free(objectlist);
+                free(numberlist);
+                return 1;//continue with action
             }
         }
         addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
@@ -1217,19 +1232,20 @@ int checkSell(char** inputWords,int* currentWordIndex,int inputWordsCount,struct
         }
         validCheck = 1;
     }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
-    if(validCheck==0){
+    if(validCheck==0){//if the input is not in the correct format
         return 0;
     }
+    //assign the items and counts to the action package
     action->items=objectlist->next;
     action->counts= numberlist->next;
     free(objectlist->string);
     objectlist->string=NULL;
     free(objectlist);
     free(numberlist);
-    if(validCheck==3){
+    if(validCheck==3){//if the input is in the correct format and there is no more words
         return 3;
     }
-    if(strcmp("to",inputWords[(*currentWordIndex)])==0){
+    if(strcmp("to",inputWords[(*currentWordIndex)])==0){//if from exists
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1242,7 +1258,7 @@ int checkSell(char** inputWords,int* currentWordIndex,int inputWordsCount,struct
         if (strcmp(current->string, string) == 0) {
             return 0;
         }
-        while (current->next != NULL) {
+        while (current->next != NULL) {//check if the subject is already in the subjectlist
             if (strcmp(current->next->string, string) == 0) {
                 return 0;
             }
@@ -1252,17 +1268,18 @@ int checkSell(char** inputWords,int* currentWordIndex,int inputWordsCount,struct
         strcpy(action->secondSubject,inputWords[(*currentWordIndex)]);
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
-            return 3;
+            return 3;//if the input is in the correct format and there is no more words
         }
     }
     if (strcmp("if",inputWords[(*currentWordIndex)])==0){
-        return 2;
+        return 2;//continue wıth condition
     }
     if (strcmp("and",inputWords[(*currentWordIndex)])==0){
-        return 1;
+        return 1;//continue with action
     }
     return 0;
 }
+//parse go action sentence
 int checkGoTo(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
     (*currentWordIndex)++;
     if ((*currentWordIndex)==inputWordsCount){
@@ -1278,29 +1295,31 @@ int checkGoTo(char** inputWords,int* currentWordIndex,int inputWordsCount,struct
     if(!strFormatTrue(inputWords[(*currentWordIndex)])){
         return 0;
     }
+    //assign the location to the action package
     action->location=(char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
     strcpy(action->location,inputWords[(*currentWordIndex)]);
     (*currentWordIndex)++;
     if ((*currentWordIndex)==inputWordsCount){
-        return 3;
+        return 3;//if the input is in the correct format and there is no more words
     }
     if (strcmp("if",inputWords[(*currentWordIndex)])==0){
-        return 2;
+        return 2;//continue wıth condition
     }
     if (strcmp("and",inputWords[(*currentWordIndex)])==0){
-        return 1;
+        return 1;//continue with action
     }
     return 0;
 }
+//parse action sentence
 int checkAction(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
     int validCheck = 1;
     struct stringList* subjectlist= newStringList("if");
-    do{
+    do{//loop through the subjects
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
         }
-        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){//check if the subject is in the correct format
             validCheck=0;
             break;
         }
@@ -1314,9 +1333,10 @@ int checkAction(char** inputWords,int* currentWordIndex,int inputWordsCount,stru
         }
     }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
     
-    if(validCheck==0){
+    if(validCheck==0){//if the input is not in the correct format
         return 0;
     }
+    //assign the subjects to the action package
     action->subjects=subjectlist->next;
     free(subjectlist->string);
     subjectlist->string=NULL;
@@ -1324,20 +1344,21 @@ int checkAction(char** inputWords,int* currentWordIndex,int inputWordsCount,stru
     if(strcmp("buy",inputWords[(*currentWordIndex)])==0){
         action->type = (char*)malloc(4*sizeof(char));
         strcpy(action->type,"buy");
-        return checkBuy(inputWords,currentWordIndex, inputWordsCount,action);
+        return checkBuy(inputWords,currentWordIndex, inputWordsCount,action);//continue with buy
     }else if(strcmp("sell",inputWords[(*currentWordIndex)])==0){
         action->type = (char*)malloc(5*sizeof(char));
         strcpy(action->type,"sell");
-        return checkSell(inputWords,currentWordIndex, inputWordsCount,action);
+        return checkSell(inputWords,currentWordIndex, inputWordsCount,action);//continue with sell
     }else if(strcmp("go",inputWords[(*currentWordIndex)])==0){
         action->type = (char*)malloc(3*sizeof(char));
         strcpy(action->type,"go");
-        return checkGoTo(inputWords,currentWordIndex,inputWordsCount,action);
+        return checkGoTo(inputWords,currentWordIndex,inputWordsCount,action);//continue with go
     }else{
-        return 0;
+        return 0;//if the input is not in the correct format
     }
 
 }
+//parse has condition sentence
 int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
     (*currentWordIndex)++;
     if ((*currentWordIndex)==inputWordsCount){
@@ -1345,7 +1366,7 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
     }
     if (strcmp("more",inputWords[(*currentWordIndex)])==0){
         condition->type = (char*)malloc(5*sizeof(char));
-        strcpy(condition->type,"more");
+        strcpy(condition->type,"more");//if the type is more
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1355,7 +1376,7 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         }
     }else if (strcmp("less",inputWords[(*currentWordIndex)])==0){
         condition->type = (char*)malloc(5*sizeof(char));
-        strcpy(condition->type,"less");
+        strcpy(condition->type,"less");//if the type is less
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1365,13 +1386,13 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         }
     }else{
         condition->type = (char*)malloc(4*sizeof(char));
-        strcpy(condition->type,"has");
+        strcpy(condition->type,"has");//if the type is has
         (*currentWordIndex)--;
     }
     int validCheck = 0;
     struct stringList* objectlist= newStringList("if");
     struct intList* numberlist= newIntList(0);
-    do{
+    do{//loop through the items
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1382,7 +1403,13 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
             }else{
                 validCheck=1;
                 (*currentWordIndex)--;
-                return 1;
+                condition->items=objectlist->next;
+                condition->counts= numberlist->next;
+                free(objectlist->string);
+                objectlist->string=NULL;
+                free(objectlist);
+                free(numberlist);                
+                return 1;//continue with condition
             }
         }
         addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
@@ -1405,6 +1432,7 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
         }
         validCheck = 1;
     }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    //assign the items and counts to the condition package
     condition->items=objectlist->next;
     condition->counts= numberlist->next;
     free(objectlist->string);
@@ -1413,6 +1441,7 @@ int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct 
     free(numberlist);
     return validCheck;
 }
+//parse at condition sentence
 int checkAt(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
     (*currentWordIndex)++;
     if ((*currentWordIndex)==inputWordsCount){
@@ -1421,22 +1450,24 @@ int checkAt(char** inputWords,int* currentWordIndex,int inputWordsCount,struct c
     if(!strFormatTrue(inputWords[(*currentWordIndex)])){
         return 0;
     }
+    //assign the location to the condition package
     condition->location = (char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
     strcpy(condition->location,inputWords[(*currentWordIndex)]);
     (*currentWordIndex)++;
     if ((*currentWordIndex)==inputWordsCount){
-        return 3;
+        return 3;//if the input is in the correct format and there is no more words
     }
     if (strcmp("and",inputWords[(*currentWordIndex)])==0){
-        return 1;
+        return 1;//continue with condition
     }
     return 0;
 }
+//parse condition sentence
 int checkCondition(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
     int validCheck = 1;
     int sentenceControl= (*currentWordIndex);
     struct stringList* subjectlist= newStringList("if");
-    do{
+    do{//loop through the subjects
         (*currentWordIndex)++;
         if ((*currentWordIndex)==inputWordsCount){
             return 0;
@@ -1455,26 +1486,28 @@ int checkCondition(char** inputWords,int* currentWordIndex,int inputWordsCount,s
         }
     }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
     
-    if(validCheck==0){
+    if(validCheck==0){//if the input is not in the correct format
         return 0;
     }
+    //assign the subjects to the condition package
     condition->subjects=subjectlist->next;
     free(subjectlist->string);
     subjectlist->string=NULL;
     free(subjectlist);
     if(strcmp("has",inputWords[(*currentWordIndex)])==0){
-        return checkHas(inputWords,currentWordIndex, inputWordsCount,condition);
+        return checkHas(inputWords,currentWordIndex, inputWordsCount,condition);//continue with has
     }else if(strcmp("at",inputWords[(*currentWordIndex)])==0){
-        return checkAt(inputWords,currentWordIndex, inputWordsCount,condition);
         condition->type = (char*)malloc(3*sizeof(char));
-        strcpy(condition->type,"at");
+        strcpy(condition->type,"at");        
+        return checkAt(inputWords,currentWordIndex, inputWordsCount,condition);//continue with at
     }else if((strcmp("buy",inputWords[(*currentWordIndex)])==0)||(strcmp("sell",inputWords[(*currentWordIndex)])==0)||(strcmp("go",inputWords[(*currentWordIndex)])==0)){
         (*currentWordIndex)=sentenceControl;
-        return 2;
+        return 2;//continue with action
     }else{
-        return 0;
+        return 0;//if the input is not in the correct format
     }
 }
+//parse sentence
 int checkSentence(char** inputWords,int* currentWordIndex,int inputWordsCount,struct sentencePackage* package){
     package->actions = newActionPackageList(newActionPackage());
     struct actionPackageList* action = package->actions;
@@ -1516,7 +1549,7 @@ int checkSentence(char** inputWords,int* currentWordIndex,int inputWordsCount,st
     }
     return 1;
 }
-
+//parse the input
 struct sentencePackageList* checkPhrase(char** inputWords, int* currentWordIndex,int inputWordsCount){
 
     struct sentencePackageList* root = newSentencePackageList(newSentencePackage());

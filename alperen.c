@@ -23,26 +23,33 @@ struct node {
 // Subject and Node functions
 
 struct subject* createSubject(char* name) {
-    struct subject* new_subject = (struct subject*)malloc(sizeof(struct subject));
-    new_subject->name = malloc(strlen(name) + 1);
-    strcpy(new_subject->name, name);
-    new_subject->location = malloc(strlen("NOWHERE") + 1);
-    strcpy(new_subject->location, "NOWHERE");
+    struct subject* newSubject = (struct subject*)malloc(sizeof(struct subject));
+    newSubject->name = malloc(strlen(name) + 1);
+    strcpy(newSubject->name, name);
+    newSubject->location = malloc(strlen("NOWHERE") + 1);
+    strcpy(newSubject->location, "NOWHERE");
     for (int i = 0; i < MAX_INVERTORY_SIZE; i++) {
-        new_subject->inventory[i] = 0;
+        newSubject->inventory[i] = 0;
     }
-    return new_subject;
+    return newSubject;
 };
 
-struct subject* findSubject(struct node* head, char* name) {
+struct subject* findSubject(struct node* head, char* name) { 
     struct node* current = head;
+    struct node* previous = NULL;
     while (current != NULL) {
         if (strcmp(current->person->name, name) == 0) {
             return current->person;
         }
+        previous = current;
         current = current->next;
     }
-    return NULL;
+    struct subject* newSubject = createSubject(name);
+    struct node* newNode = (struct node*)malloc(sizeof(struct node));
+    newNode->person = newSubject;
+    newNode->next = NULL;
+    previous->next = newNode;
+    return newSubject;
 };
 
 struct questionPackage* handleWho(char** inputWords, int inputWordsCount);
@@ -52,11 +59,11 @@ struct questionPackage* handleSingleTotalwithoutItem(char** inputWords, int inpu
 struct questionPackage* handleSingleTotalwithItem(char** inputWords, int inputWordsCount);
 struct questionPackage* handleMultipleTotal(char** inputWords, int inputWordsCount);
 
-void changeLocation(struct subject* person, char* new_location) {
+void changeLocation(struct subject* person, char* newLocation) {
     free(person->location);
-    person->location = malloc(strlen(new_location) + 1);
-    strcpy(person->location, new_location);
-};
+    person->location = malloc((strlen(newLocation) + 1) * sizeof(char));
+    strcpy(person->location, newLocation);
+}
 
 struct node* addNode(struct node* parent, char* name) {
     struct node* newNode = (struct node*)malloc(sizeof(struct node));
@@ -64,9 +71,15 @@ struct node* addNode(struct node* parent, char* name) {
     newNode->next = NULL;
     parent->next = newNode;
     return newNode;
-};
+}
 
 // Item functions
+
+void addItem(char* item, char** itemList, int* itemListCount) {
+    itemList[*itemListCount] = malloc(strlen(item) + 1);
+    strcpy(itemList[*itemListCount], item);
+    (*itemListCount)++;
+}
 
 int getItemIndex(char* item, char** itemList, int *itemListCount) {
     for (int i = 0; i < *itemListCount; i++) {
@@ -74,7 +87,8 @@ int getItemIndex(char* item, char** itemList, int *itemListCount) {
             return i;
         }
     }
-    return -1;
+    addItem(item, itemList, itemListCount);
+    return *itemListCount - 1;
 }
 
 int getItemCount(int itemIndex, struct subject* person) {
@@ -85,18 +99,13 @@ void changeItemCount(int itemIndex, struct subject* person, int diff) {
     person->inventory[itemIndex] += diff;
 }
 
-void addItem(char* item, char** itemList, int* itemListCount) {
-    itemList[*itemListCount] = malloc(strlen(item) + 1);
-    strcpy(itemList[*itemListCount], item);
-    (*itemListCount)++;
-}
 
 // String check functions
 //TODO: contains or equals
 
 int strContainsKeyword(char* word) {
     for (int i = 0; i < 19; i++) {
-        if (strstr(word, keywords[i]) != NULL) {
+        if (strcmp(word, keywords[i]) == 0) {
             return 1;
         }
     }
@@ -114,6 +123,24 @@ int strOnlyLettersandUnderscores(char* word) {
 
 int strFormatTrue(char* word) {
     return !strContainsKeyword(word) && strOnlyLettersandUnderscores(word);
+}
+
+int isStrNumber(char* word) {
+    for (int i = 0; i < strlen(word); i++) {
+        if (!((word[i] >= '0' && word[i] <= '9'))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int strToNumber(char* word){
+    int sum =0;
+    for (int i = 0; i < strlen(word); i++) {
+        sum = sum*10;
+        sum+=(int)(word[i]-'0');
+    }
+    return sum;
 }
 
 // String list
@@ -147,12 +174,27 @@ int addString(struct stringList* root , char* string) {
     return 1;
 }
     
+int stringListLength(struct stringList* root) {
+    struct stringList* current = root;
+    int length = 0;
+    while (current != NULL) {
+        length++;
+        current = current->next;
+    }
+    return length;
+}
+
 void freeStringList(struct stringList* head) {
+    if (head == NULL) {
+        return;
+    }
     struct stringList* current = head;
     while (current != NULL) {
         struct stringList* next = current->next;
-        free(current->string);
-        current->string = NULL;
+        if (current->string != NULL) {
+            free(current->string);
+            current->string = NULL;
+        }
         free(current);
         current = next;
     }
@@ -171,13 +213,19 @@ void freeQuestionPackage(struct questionPackage* package) {
     if (package == NULL) {
         return;
     }
-    free(package->type);
-    package->type = NULL;
+    if (package->type != NULL) {
+        free(package->type);
+        package->type = NULL;
+    }
     freeStringList(package->subjects);
-    free(package->location);
-    package->location = NULL;
-    free(package->item);
-    package->item = NULL;
+    if (package->location != NULL) {
+        free(package->location);
+        package->location = NULL;
+    }
+    if (package->item != NULL) {
+        free(package->item);
+        package->item = NULL;
+    }
     free(package);
     package = NULL;
 }
@@ -486,15 +534,21 @@ void freeActionPackage(struct actionPackage* package) {
     if (package == NULL) {
         return;
     }
-    free(package->type);
-    package->type = NULL;
+    if (package->type != NULL) {
+        free(package->type);
+        package->type = NULL;
+    }
     freeStringList(package->subjects);
-    free(package->secondSubject);
-    package->secondSubject = NULL;
+    if (package->secondSubject != NULL) {
+        free(package->secondSubject);
+        package->secondSubject = NULL;
+    }
     freeStringList(package->items);
     freeIntList(package->counts);
-    free(package->location);
-    package->location = NULL;
+    if (package->location != NULL) {
+        free(package->location);
+        package->location = NULL;
+    }
     free(package);
     package = NULL;
 }
@@ -548,13 +602,17 @@ void freeConditionPackage(struct conditionPackage* package) {
     if (package == NULL) {
         return;
     }
-    free(package->type);
-    package->type = NULL;
+    if (package->type != NULL) {
+        free(package->type);
+        package->type = NULL;
+    }
     freeStringList(package->subjects);
     freeStringList(package->items);
     freeIntList(package->counts);
-    free(package->location);
-    package->location = NULL;
+    if (package->location != NULL) {
+        free(package->location);
+        package->location = NULL;
+    }
     free(package);
     package = NULL;
 }
@@ -633,70 +691,803 @@ void freeSentencePackageList(struct sentencePackageList* head) {
     }
 }
 
+// Condition runner
+
+int runAtCondition(struct conditionPackage* package, struct node* subjectsHead);
+int runMultipleHasCondition(struct conditionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount);
+int runSingleHasCondition(struct subject person, int itemIndex, char* type, int count);
+    
+int runCondition(struct conditionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    if (package->type == NULL) {
+        return 1;
+    }
+    if (strcmp(package->type, "at") == 0) {
+        return runAtCondition(package, subjectsHead);
+    } else if (strcmp(package->type, "has") == 0 
+    || strcmp(package->type, "more") == 0 
+    || strcmp(package->type, "less") == 0) {
+        return runMultipleHasCondition(package, subjectsHead, itemList, itemListCount);
+    } else {
+        printf("logic error at condition runner\n");
+    }
+}
+
+int runAtCondition(struct conditionPackage* package, struct node* subjectsHead) {
+    struct stringList* current = package->subjects;
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        if (currentSubject == NULL) {
+            return 0;
+        }
+        if (strcmp(currentSubject->location, package->location) != 0) {
+            return 0;
+        }
+        current = current->next;
+    }
+    return 1;
+}
+
+int runMultipleHasCondition(struct conditionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct stringList* current = package->subjects;
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        struct stringList* currentItem = package->items;
+        struct intList* currentCount = package->counts;
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            int singleHasCondition = runSingleHasCondition(*currentSubject, itemIndex, package->type, currentCount->number);
+            if (singleHasCondition == 0) {
+                return 0;
+            }
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+    return 1;
+}
+        
+int runSingleHasCondition(struct subject person, int itemIndex, char* type, int count) {
+    if (strcmp(type, "has") == 0) {
+        return person.inventory[itemIndex] == count;
+    } else if (strcmp(type, "more") == 0) {
+        return person.inventory[itemIndex] > count;
+    } else if (strcmp(type, "less") == 0) {
+        return person.inventory[itemIndex] < count;
+    } else {
+        printf("logic error at runSingleHasCondition\n");
+    }
+}
+    
+// Condition list runner
+
+int runConditionList(struct conditionPackageList* head, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct conditionPackageList* current = head;
+    while (current != NULL) {
+        int currentCondition = runCondition(current->package, subjectsHead, itemList, itemListCount);
+        if (currentCondition == 0) {
+            return 0;
+        }
+        current = current->next;
+    }
+    return 1;
+}
+
+// Action runner
+
+void runGoAction(struct actionPackage* package, struct node* subjectsHead);
+void runBuyAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount);
+void runBuyFromAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount);
+void runSellAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount);
+void runSellToAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount);
+
+void runAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    if (strcmp(package->type, "go") == 0) {
+        runGoAction(package, subjectsHead);
+    } else if (strcmp(package->type, "buy") == 0) {
+        if (package->secondSubject == NULL) {
+            runBuyAction(package, subjectsHead, itemList, itemListCount);
+        } else {
+            runBuyFromAction(package, subjectsHead, itemList, itemListCount);
+        }
+    } else if (strcmp(package->type, "sell") == 0) {
+        if (package->secondSubject == NULL) {
+            runSellAction(package, subjectsHead, itemList, itemListCount);
+        } else {
+            runSellToAction(package, subjectsHead, itemList, itemListCount);
+        }
+    } else {
+        printf("logic error at action runner\n");
+    }
+}
+
+void runGoAction(struct actionPackage* package, struct node* subjectsHead) {
+    struct stringList* current = package->subjects;
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        changeLocation(currentSubject, package->location);
+        current = current->next;
+    }
+}
+
+void runBuyAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct stringList* current = package->subjects;
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        struct stringList* currentItem = package->items;
+        struct intList* currentCount = package->counts;
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            changeItemCount(itemIndex, currentSubject, currentCount->number);
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+}
+
+void runBuyFromAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    int buyerCount = stringListLength(package->subjects);
+    struct subject* seller = findSubject(subjectsHead, package->secondSubject);
+    struct stringList* currentItem = package->items;
+    struct intList* currentCount = package->counts;
+    // first check if seller has enough items
+    while (currentItem != NULL) {
+        int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+        if (runSingleHasCondition(*seller, itemIndex, "less", currentCount->number * buyerCount) == 1) {
+            return;
+        }
+        currentItem = currentItem->next;
+        currentCount = currentCount->next;
+    }
+    // reset currentCount and currentItem
+    currentItem = package->items;
+    currentCount = package->counts;
+    // then buy
+    struct stringList* current = package->subjects;
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            changeItemCount(itemIndex, currentSubject, currentCount->number);
+            changeItemCount(itemIndex, seller, (-1) * currentCount->number);
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+}
+
+void runSellAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct stringList* current = package->subjects;
+    struct stringList* currentItem = package->items;
+    struct intList* currentCount = package->counts;
+    // first check if sellers have enough items
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            if (runSingleHasCondition(*currentSubject, itemIndex, "less", currentCount->number) == 1) {
+                return;
+            }
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+    // reset current, currentCount and currentItem
+    current = package->subjects;
+    currentItem = package->items;
+    currentCount = package->counts;
+    // then sell
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            changeItemCount(itemIndex, currentSubject, (-1) * currentCount->number);
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+}
+
+void runSellToAction(struct actionPackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct stringList* current = package->subjects;
+    struct stringList* currentItem = package->items;
+    struct intList* currentCount = package->counts;
+    // first check if sellers have enough items
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            if (runSingleHasCondition(*currentSubject, itemIndex, "less", currentCount->number) == 1) {
+                printf("Not eligable to sell in sell\n");
+                return;
+            }
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+    // reset current, currentCount and currentItem
+    current = package->subjects;
+    currentItem = package->items;
+    currentCount = package->counts;
+    // then sell
+    struct subject* buyer = findSubject(subjectsHead, package->secondSubject);
+    while (current != NULL) {
+        struct subject* currentSubject = findSubject(subjectsHead, current->string);
+        while (currentItem != NULL) {
+            int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
+            changeItemCount(itemIndex, currentSubject, (-1) * currentCount->number);
+            changeItemCount(itemIndex, buyer, currentCount->number);
+            currentItem = currentItem->next;
+            currentCount = currentCount->next;
+        }
+        current = current->next;
+    }
+}
+
+// Action list runner
+
+void runActionList(struct actionPackageList* head, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct actionPackageList* current = head;
+    while (current != NULL) {
+        runAction(current->package, subjectsHead, itemList, itemListCount);
+        current = current->next;
+    }
+}
+
+// Sentence runner
+
+void runSentence(struct sentencePackage* package, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    if (package->conditions == NULL) {
+        runActionList(package->actions, subjectsHead, itemList, itemListCount);
+    } else {
+        if (runConditionList(package->conditions, subjectsHead, itemList, itemListCount) == 1) {
+            runActionList(package->actions, subjectsHead, itemList, itemListCount);
+        }
+    }
+}
+
+// Sentence list runner
+
+void runSentenceList(struct sentencePackageList* head, struct node* subjectsHead, char** itemList, int* itemListCount) {
+    struct sentencePackageList* current = head;
+    while (current != NULL) {
+        runSentence(current->package, subjectsHead, itemList, itemListCount);
+        current = current->next;
+    }
+}
+
+// print sentence list all the way inside
+
+void printSentenceList(struct sentencePackageList* head) {
+    struct sentencePackageList* current = head;
+    printf("************\n");
+    while (current != NULL) {
+        struct sentencePackage* currentPackage = current->package;
+        struct conditionPackageList* currentConditions = currentPackage->conditions;
+        struct actionPackageList* currentActions = currentPackage->actions;
+        printf("Conditions: \n");
+        while (currentConditions != NULL) {
+            struct conditionPackage* currentCondition = currentConditions->package;
+            printf("Type: %s, Subjects: ", currentCondition->type);
+            struct stringList* currentSubjects = currentCondition->subjects;
+            while (currentSubjects != NULL) {
+                printf("%s ", currentSubjects->string);
+                currentSubjects = currentSubjects->next;
+            }
+            printf("Items: ");
+            struct stringList* currentItems = currentCondition->items;
+            while (currentItems != NULL) {
+                printf("%s ", currentItems->string);
+                currentItems = currentItems->next;
+            }
+            printf("Counts: ");
+            struct intList* currentCounts = currentCondition->counts;
+            while (currentCounts != NULL) {
+                printf("%d ", currentCounts->number);
+                currentCounts = currentCounts->next;
+            }
+            printf("Location: %s\n", currentCondition->location);
+            currentConditions = currentConditions->next;
+            printf("\n");
+        }
+        printf("Actions: \n");
+        while (currentActions != NULL) {
+            struct actionPackage* currentAction = currentActions->package;
+            printf("Type: %s, Subjects: ", currentAction->type);
+            struct stringList* currentSubjects = currentAction->subjects;
+            while (currentSubjects != NULL) {
+                printf("%s ", currentSubjects->string);
+                currentSubjects = currentSubjects->next;
+            }
+            printf("Second Subject: %s, Items: ", currentAction->secondSubject);
+            struct stringList* currentItems = currentAction->items;
+            while (currentItems != NULL) {
+                printf("%s ", currentItems->string);
+                currentItems = currentItems->next;
+            }
+            printf("Counts: ");
+            struct intList* currentCounts = currentAction->counts;
+            while (currentCounts != NULL) {
+                printf("%d ", currentCounts->number);
+                currentCounts = currentCounts->next;
+            }
+            printf("Location: %s\n", currentAction->location);
+            currentActions = currentActions->next;
+            printf("\n");
+        }
+        current = current->next;
+    }
+}
+
+int checkBuy(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
+    int validCheck = 0;
+    struct stringList* objectlist= newStringList("if");
+    struct intList* numberlist= newIntList(0);
+    do{
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!isStrNumber(inputWords[(*currentWordIndex)])){
+            if(validCheck==0){
+                break;
+            }else{
+                validCheck=1;
+                (*currentWordIndex)--;
+                return 1;
+            }
+        }
+        addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            validCheck=0;
+            break;
+        }
+        if(addString(objectlist,inputWords[(*currentWordIndex)])==0){
+            validCheck=0;
+            break;
+        }
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            validCheck= 3;
+            break;
+        }
+        validCheck = 1;
+    }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    if(validCheck==0){
+        return 0;
+    }
+    action->items=objectlist->next;
+    action->counts= numberlist->next;
+    free(objectlist->string);
+    objectlist->string=NULL;
+    free(objectlist);
+    free(numberlist);
+    if(validCheck==3){
+        return 3;
+    }
+    if(strcmp("from",inputWords[(*currentWordIndex)])==0){
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            return 0;
+        }
+        char* string = inputWords[(*currentWordIndex)];
+        struct stringList* current = action->subjects;
+        if (strcmp(current->string, string) == 0) {
+            return 0;
+        }
+        while (current->next != NULL) {
+            if (strcmp(current->next->string, string) == 0) {
+                return 0;
+            }
+            current = current->next;
+        }
+        action->secondSubject=(char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
+        strcpy(action->secondSubject,inputWords[(*currentWordIndex)]);
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 3;
+        }
+    }
+    if (strcmp("if",inputWords[(*currentWordIndex)])==0){
+        return 2;
+    }
+    if (strcmp("and",inputWords[(*currentWordIndex)])==0){
+        return 1;
+    }
+    return 0;
+}
+int checkSell(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
+    int validCheck = 0;
+    struct stringList* objectlist= newStringList("if");
+    struct intList* numberlist= newIntList(0);
+    do{
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!isStrNumber(inputWords[(*currentWordIndex)])){
+            if(validCheck==0){
+                break;
+            }else{
+                validCheck=1;
+                (*currentWordIndex)--;
+                return 1;
+            }
+        }
+        addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            validCheck=0;
+            break;
+        }
+        if(addString(objectlist,inputWords[(*currentWordIndex)])==0){
+            validCheck=0;
+            break;
+        }
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            validCheck= 3;
+            break;
+        }
+        validCheck = 1;
+    }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    if(validCheck==0){
+        return 0;
+    }
+    action->items=objectlist->next;
+    action->counts= numberlist->next;
+    free(objectlist->string);
+    objectlist->string=NULL;
+    free(objectlist);
+    free(numberlist);
+    if(validCheck==3){
+        return 3;
+    }
+    if(strcmp("to",inputWords[(*currentWordIndex)])==0){
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            return 0;
+        }
+        char* string = inputWords[(*currentWordIndex)];
+        struct stringList* current = action->subjects;
+        if (strcmp(current->string, string) == 0) {
+            return 0;
+        }
+        while (current->next != NULL) {
+            if (strcmp(current->next->string, string) == 0) {
+                return 0;
+            }
+            current = current->next;
+        }
+        action->secondSubject=(char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
+        strcpy(action->secondSubject,inputWords[(*currentWordIndex)]);
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 3;
+        }
+    }
+    if (strcmp("if",inputWords[(*currentWordIndex)])==0){
+        return 2;
+    }
+    if (strcmp("and",inputWords[(*currentWordIndex)])==0){
+        return 1;
+    }
+    return 0;
+}
+int checkGoTo(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 0;
+    }
+    if (!strcmp("to",inputWords[(*currentWordIndex)])==0){
+        return 0;
+    }
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 0;
+    } 
+    if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+        return 0;
+    }
+    action->location=(char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
+    strcpy(action->location,inputWords[(*currentWordIndex)]);
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 3;
+    }
+    if (strcmp("if",inputWords[(*currentWordIndex)])==0){
+        return 2;
+    }
+    if (strcmp("and",inputWords[(*currentWordIndex)])==0){
+        return 1;
+    }
+    return 0;
+}
+int checkAction(char** inputWords,int* currentWordIndex,int inputWordsCount,struct actionPackage* action){
+    int validCheck = 1;
+    struct stringList* subjectlist= newStringList("if");
+    do{
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            validCheck=0;
+            break;
+        }
+        if(addString(subjectlist,inputWords[(*currentWordIndex)])==0){
+            validCheck=0;
+            break;
+        }
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+    }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    
+    if(validCheck==0){
+        return 0;
+    }
+    action->subjects=subjectlist->next;
+    free(subjectlist->string);
+    subjectlist->string=NULL;
+    free(subjectlist);
+    if(strcmp("buy",inputWords[(*currentWordIndex)])==0){
+        action->type = (char*)malloc(4*sizeof(char));
+        strcpy(action->type,"buy");
+        return checkBuy(inputWords,currentWordIndex, inputWordsCount,action);
+    }else if(strcmp("sell",inputWords[(*currentWordIndex)])==0){
+        action->type = (char*)malloc(5*sizeof(char));
+        strcpy(action->type,"sell");
+        return checkSell(inputWords,currentWordIndex, inputWordsCount,action);
+    }else if(strcmp("go",inputWords[(*currentWordIndex)])==0){
+        action->type = (char*)malloc(3*sizeof(char));
+        strcpy(action->type,"go");
+        return checkGoTo(inputWords,currentWordIndex,inputWordsCount,action);
+    }else{
+        return 0;
+    }
+
+}
+int checkHas(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 0;
+    }
+    if (strcmp("more",inputWords[(*currentWordIndex)])==0){
+        condition->type = (char*)malloc(5*sizeof(char));
+        strcpy(condition->type,"more");
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if (!strcmp("than",inputWords[(*currentWordIndex)])==0){
+            return 0;
+        }
+    }else if (strcmp("less",inputWords[(*currentWordIndex)])==0){
+        condition->type = (char*)malloc(5*sizeof(char));
+        strcpy(condition->type,"less");
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if (!strcmp("than",inputWords[(*currentWordIndex)])==0){
+            return 0;
+        }
+    }else{
+        condition->type = (char*)malloc(4*sizeof(char));
+        strcpy(condition->type,"has");
+        (*currentWordIndex)--;
+    }
+    int validCheck = 0;
+    struct stringList* objectlist= newStringList("if");
+    struct intList* numberlist= newIntList(0);
+    do{
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!isStrNumber(inputWords[(*currentWordIndex)])){
+            if(validCheck==0){
+                break;
+            }else{
+                validCheck=1;
+                (*currentWordIndex)--;
+                return 1;
+            }
+        }
+        addInt(numberlist,strToNumber(inputWords[(*currentWordIndex)]));
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            validCheck=0;
+            break;
+        }
+        if(addString(objectlist,inputWords[(*currentWordIndex)])==0){
+            validCheck=0;
+            break;
+        }
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            validCheck= 3;
+            break;
+        }
+        validCheck = 1;
+    }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    condition->items=objectlist->next;
+    condition->counts= numberlist->next;
+    free(objectlist->string);
+    objectlist->string=NULL;
+    free(objectlist);
+    free(numberlist);
+    return validCheck;
+}
+int checkAt(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 0;
+    } 
+    if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+        return 0;
+    }
+    condition->location = (char*)malloc((strlen(inputWords[(*currentWordIndex)])+1)*sizeof(char));
+    strcpy(condition->location,inputWords[(*currentWordIndex)]);
+    (*currentWordIndex)++;
+    if ((*currentWordIndex)==inputWordsCount){
+        return 3;
+    }
+    if (strcmp("and",inputWords[(*currentWordIndex)])==0){
+        return 1;
+    }
+    return 0;
+}
+int checkCondition(char** inputWords,int* currentWordIndex,int inputWordsCount,struct conditionPackage* condition){
+    int validCheck = 1;
+    int sentenceControl= (*currentWordIndex);
+    struct stringList* subjectlist= newStringList("if");
+    do{
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+        if(!strFormatTrue(inputWords[(*currentWordIndex)])){
+            validCheck=0;
+            break;
+        }
+        if(addString(subjectlist,inputWords[(*currentWordIndex)])==0){
+            validCheck=0;
+            break;
+        }
+        (*currentWordIndex)++;
+        if ((*currentWordIndex)==inputWordsCount){
+            return 0;
+        }
+    }while(strcmp("and",inputWords[(*currentWordIndex)])==0);
+    
+    if(validCheck==0){
+        return 0;
+    }
+    condition->subjects=subjectlist->next;
+    free(subjectlist->string);
+    subjectlist->string=NULL;
+    free(subjectlist);
+    if(strcmp("has",inputWords[(*currentWordIndex)])==0){
+        return checkHas(inputWords,currentWordIndex, inputWordsCount,condition);
+    }else if(strcmp("at",inputWords[(*currentWordIndex)])==0){
+        return checkAt(inputWords,currentWordIndex, inputWordsCount,condition);
+        condition->type = (char*)malloc(3*sizeof(char));
+        strcpy(condition->type,"at");
+    }else if((strcmp("buy",inputWords[(*currentWordIndex)])==0)||(strcmp("sell",inputWords[(*currentWordIndex)])==0)||(strcmp("go",inputWords[(*currentWordIndex)])==0)){
+        (*currentWordIndex)=sentenceControl;
+        return 2;
+    }else{
+        return 0;
+    }
+}
+int checkSentence(char** inputWords,int* currentWordIndex,int inputWordsCount,struct sentencePackage* package){
+    package->actions = newActionPackageList(newActionPackage());
+    struct actionPackageList* action = package->actions;
+    int validCheck=1;
+    while (1){
+        validCheck=checkAction(inputWords,currentWordIndex,inputWordsCount,action->package);
+        if(validCheck==0){//invalid
+            return 0;
+        }else if(validCheck==1){//no problem continue with next action
+            action->next=newActionPackageList(newActionPackage());
+            action=action->next;
+            continue;
+        }else if(validCheck==2){//there is a if so go on with condition part
+            break;
+        }else if(validCheck==3){//we have reached the last word and sentence is completed
+            return 3;
+        }
+    }
+    package->conditions = newConditionPackageList(newConditionPackage());
+    struct conditionPackageList* condition = package->conditions;
+    int ifCheck = 0;
+    while (1){
+        validCheck=checkCondition(inputWords,currentWordIndex,inputWordsCount,condition->package);
+        if(validCheck==0){//invalid
+            return 0;
+        }else if(validCheck==1){//no problem continue with next condition
+            condition->next = newConditionPackageList(newConditionPackage());
+            condition=condition->next;
+            ifCheck=1;
+            continue;
+        }else if(validCheck==2){//condition part is finished so sentence is completed
+            if (ifCheck==0){
+                return 0;
+            }
+            break;
+        }else if(validCheck==3){//we have reached the last word and sentence is completed
+            return 3;
+        }
+    }
+    return 1;
+}
+
+struct sentencePackageList* checkPhrase(char** inputWords, int* currentWordIndex,int inputWordsCount){
+
+    struct sentencePackageList* root = newSentencePackageList(newSentencePackage());
+    struct sentencePackageList* current = root;
+    
+    int phraseConclusion;
+    while(1){
+        phraseConclusion=checkSentence(inputWords,currentWordIndex,inputWordsCount,current->package);
+        if(phraseConclusion==0){//invalid
+            break;
+        }else if(phraseConclusion==1){//a valid sectence
+            current->next = newSentencePackageList(newSentencePackage());
+            current = current->next;
+            continue;
+        }else if(phraseConclusion==3){//the last sentence
+            break;
+        }
+    }
+    if (phraseConclusion==0){
+        printf("INVALID\n");
+        freeSentencePackageList(root);
+        root = NULL;
+        return NULL;
+    }else{
+        printf("OK\n");
+        return root;
+    }
+}
+
 void main() {
 
     char** itemList = (char**)calloc(MAX_INVERTORY_SIZE, sizeof(char*));
     int* itemListCount = (int*)malloc(sizeof(int));
     *itemListCount = 0;
-
-    struct node* subjectsHead = NULL;
-    struct node* SubjectsTail = NULL;
-
-    //example
-    subjectsHead = (struct node*)malloc(sizeof(struct node));
-    subjectsHead->person = createSubject("John");
-    subjectsHead->next = NULL;
-    SubjectsTail = subjectsHead;
-    printf("Name of the first person: %s\n", subjectsHead->person->name);
-    printf("Location of the first person: %s\n", subjectsHead->person->location);
-    printf("first item of the inventory of the first person: %d\n", subjectsHead->person->inventory[16777]);
-
-    SubjectsTail = addNode(SubjectsTail, "Alice");
-    printf("Name of the second person: %s\n", SubjectsTail->person->name);
-    printf("Location of the second person: %s\n", SubjectsTail->person->location);
-    printf("first item of the inventory of the second person: %d\n", SubjectsTail->person->inventory[16777]);
-
-    SubjectsTail = addNode(SubjectsTail, "Bob");
-    printf("Name of the third person: %s\n", SubjectsTail->person->name);
-    printf("Location of the third person: %s\n", SubjectsTail->person->location);
-    printf("first item of the inventory of the third person: %d\n", SubjectsTail->person->inventory[16777]);
-
-    changeLocation(findSubject(subjectsHead, "Alice"), "New_York");
-    printf("Location of Alice: %s\n", findSubject(subjectsHead, "Alice")->location);
-
-    changeLocation(findSubject(subjectsHead, "Bob"), "Los_Angeles");
-    printf("Location of Bob: %s\n", findSubject(subjectsHead, "Bob")->location);
-
-    addItem("apple", itemList, itemListCount);
-    addItem("banana", itemList, itemListCount);
-    addItem("carrot", itemList, itemListCount);
-    printf("Item list count: %d\n", *itemListCount);
-    printf("Item list first item: %s\n", itemList[0]);
-    printf("Item list second item: %s\n", itemList[1]);
-    printf("Item list third item: %s\n", itemList[2]);
-
-    changeItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 5);
-    printf("Alice's apple count: %d\n", getItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
-
-    changeItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice"), -2);
-    printf("Alice's apple count: %d\n", getItemCount(getItemIndex("apple", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
-
-    changeItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 3);
-    printf("Alice's banana count: %d\n", getItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
-
-    changeItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice"), -1);
-    printf("Alice's banana count: %d\n", getItemCount(getItemIndex("banana", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
-
-    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Alice"), 1);
-    printf("Alice's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Alice")));
-
-    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Bob"), 2);
-    printf("Bob's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "Bob")));
-
-    changeItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "John"), 3);
-    printf("John's carrot count: %d\n", getItemCount(getItemIndex("carrot", itemList, itemListCount), findSubject(subjectsHead, "John"))); 
-
-
+    struct node* subjects = (struct node*)malloc(sizeof(struct node));
+    subjects->person = createSubject("NOBODY");
+    subjects->next = NULL;
+    // for syntax check iteration
+    int currentWordIndexValue = -1;
+    int* currentWordIndex = &currentWordIndexValue;
 
     
     while (1) { // shell loop
@@ -708,33 +1499,35 @@ void main() {
         
 
 
-        char* input_words[MAX_CHAR_COUNT];
+        char* inputWords[MAX_CHAR_COUNT];
         int inputWordsCount = 0;
 
         char* token = strtok(input, " ");
 
         while (token != NULL) {
-            input_words[inputWordsCount] = token;
+            inputWords[inputWordsCount] = token;
             inputWordsCount++;
             token = strtok(NULL, " ");
         }
         
-        printf("Input words count: %d\n", inputWordsCount);
 
-        if (inputWordsCount == 1 && strcmp(input_words[0], "exit") == 0) {
+        if (inputWordsCount == 1 && strcmp(inputWords[0], "exit") == 0) {
             break;
         }
             
-        
-        for (int i = 0; i < inputWordsCount; i++) {
-            //printf("%s\n", input_words[i]);
-            //printf("%d\n", strFormatTrue(input_words[i]));
-        }
 
-        if (strcmp(input_words[inputWordsCount-1], "?") == 0) {
-            struct questionPackage* package = parseQuestion(input_words, inputWordsCount);
-            runQuestion(package, subjectsHead, itemList, itemListCount);
+        if (strcmp(inputWords[inputWordsCount-1], "?") == 0) {
+            struct questionPackage* package = parseQuestion(inputWords, inputWordsCount);
+            runQuestion(package, subjects, itemList, itemListCount);
             freeQuestionPackage(package);
+        } else {
+            *currentWordIndex = -1;
+            struct sentencePackageList* packageList = checkPhrase(inputWords, currentWordIndex, inputWordsCount);
+            if (packageList == NULL) {
+                continue;
+            }
+            runSentenceList(packageList, subjects, itemList, itemListCount);
+            freeSentencePackageList(packageList);
         }
     }
 }
