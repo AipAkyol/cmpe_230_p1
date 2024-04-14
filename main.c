@@ -843,12 +843,11 @@ void runBuyFromAction(struct actionPackage* package, struct node* subjectsHead, 
         currentItem = currentItem->next;
         currentCount = currentCount->next;
     }
-    // reset currentCount and currentItem
-    currentItem = package->items;
-    currentCount = package->counts;
     // then buy
     struct stringList* current = package->subjects;
     while (current != NULL) {
+        currentItem = package->items;
+        currentCount = package->counts;
         struct subject* currentSubject = findSubject(subjectsHead, current->string);
         while (currentItem != NULL) {
             int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
@@ -879,12 +878,12 @@ void runSellAction(struct actionPackage* package, struct node* subjectsHead, cha
         }
         current = current->next;
     }
-    // reset current, currentCount and currentItem
+    // reset current
     current = package->subjects;
-    currentItem = package->items;
-    currentCount = package->counts;
     // then sell
     while (current != NULL) {
+        currentItem = package->items;
+        currentCount = package->counts;
         struct subject* currentSubject = findSubject(subjectsHead, current->string);
         while (currentItem != NULL) {
             int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
@@ -907,7 +906,6 @@ void runSellToAction(struct actionPackage* package, struct node* subjectsHead, c
         while (currentItem != NULL) {
             int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
             if (runSingleHasCondition(*currentSubject, itemIndex, "less", currentCount->number) == 1) {
-                printf("Not eligable to sell in sell\n");
                 return;
             }
             currentItem = currentItem->next;
@@ -915,13 +913,13 @@ void runSellToAction(struct actionPackage* package, struct node* subjectsHead, c
         }
         current = current->next;
     }
-    // reset current, currentCount and currentItem
+    // reset current
     current = package->subjects;
-    currentItem = package->items;
-    currentCount = package->counts;
     // then sell
     struct subject* buyer = findSubject(subjectsHead, package->secondSubject);
     while (current != NULL) {
+        currentItem = package->items;
+        currentCount = package->counts;
         struct subject* currentSubject = findSubject(subjectsHead, current->string);
         while (currentItem != NULL) {
             int itemIndex = getItemIndex(currentItem->string, itemList, itemListCount);
@@ -1495,7 +1493,8 @@ void main() {
     
     while (1) { // shell loop
         char input[MAX_CHAR_COUNT + 2]; // +2 for newline and null terminator
-        printf(">>"); // shell prompt
+        printf(">> "); // shell prompt
+        fflush(stdout);
         fgets(input, MAX_CHAR_COUNT + 2, stdin); // +2 for newline and null terminator
         
         input[strlen(input) - 1] = '\0'; //remove newline
